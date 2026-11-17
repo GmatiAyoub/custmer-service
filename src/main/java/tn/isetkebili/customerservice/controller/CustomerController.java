@@ -5,9 +5,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tn.isetkebili.customerservice.model.Customer;
 import tn.isetkebili.customerservice.service.CustomerService;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.List;
-
+@CrossOrigin(origins = "http://localhost:5173") // <-- AJOUTE CETTE LIGNE
 @RestController
 @RequestMapping("/api/customers")
 public class CustomerController {
