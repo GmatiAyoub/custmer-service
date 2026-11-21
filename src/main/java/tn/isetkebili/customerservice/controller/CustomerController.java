@@ -5,10 +5,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tn.isetkebili.customerservice.model.Customer;
 import tn.isetkebili.customerservice.service.CustomerService;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.List;
-@CrossOrigin(origins = "http://localhost:5173") // <-- AJOUTE CETTE LIGNE
+import java.util.Map;
+
+@CrossOrigin(origins = "*") // Autorise React et Android à communiquer
 @RestController
 @RequestMapping("/api/customers")
 public class CustomerController {
@@ -44,5 +45,24 @@ public class CustomerController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.noContent().build();
+    }
+
+    // --- NOUVELLE ROUTE DE LOGIN ---
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
+        String email = credentials.get("email");
+        String password = credentials.get("password");
+
+        if (email == null || password == null) {
+            return ResponseEntity.badRequest().body("Email et mot de passe requis");
+        }
+
+        Customer customer = customerService.login(email, password);
+
+        if (customer != null) {
+            return ResponseEntity.ok(customer); // 200 OK
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Email ou mot de passe incorrect"); // 401
+        }
     }
 }
