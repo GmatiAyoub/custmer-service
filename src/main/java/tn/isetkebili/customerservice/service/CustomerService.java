@@ -1,49 +1,75 @@
 package tn.isetkebili.customerservice.service;
 
 import org.springframework.stereotype.Service;
-import tn.isetkebili.customerservice.model.Customer;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import java.util.ArrayList;
+import tn.isetkebili.customerservice.model.Customer;
+import tn.isetkebili.customerservice.repository.CustomerRepository;
+
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class CustomerService {
 
-    private final List<Customer> customers = new ArrayList<>();
-    private long nextId = 1;
+    private final CustomerRepository repository;
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    public CustomerService() {
-        // Ajout d'un client par défaut pour les tests
-        customers.add(new Customer(nextId++, "Ali", "Ben Salah", "ali@example.com", "22123456", "123456"));
-        customers.add(new Customer(nextId++, "Sarra", "Trabelsi", "sarra@example.com", "98765432", "123456"));
+    public CustomerService(CustomerRepository repository) {
+        this.repository = repository;
     }
 
+    // Récupérer tous les clients
     public List<Customer> getAllCustomers() {
-        return customers;
+        return repository.findAll();
     }
 
+    // Récupérer un client par son ID
     public Optional<Customer> getCustomerById(Long id) {
-        return customers.stream()
-                .filter(customer -> customer.getId().equals(id))
-                .findFirst();
+        return repository.findById(id);
     }
 
-    public Customer addCustomer(Customer customer) {
-        customer.setId(nextId++);
-        customers.add(customer);
-        return customer;
+    // Ajouter un nouveau client
+    public Customer addCustomer(Customer c) {
+
+        if (c.getEmail() == null || c.getEmail().isBlank()
+                || c.getPassword() == null || c.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Email et mot de passe requis");
+        }
+
+        if (repository.existsByEmailIgnoreCase(c.getEmail())) {
+            throw new IllegalStateException("Cet email est déjà utilisé");
+        }
+
+        // L'identifiant est généré automatiquement par PostgreSQL
+        c.setId(null);
+
+        // Hachage du mot de passe avec BCrypt
+        c.setPassword(encoder.encode(c.getPassword()));
+
+        return repository.save(c);
     }
 
+    // Supprimer un client
     public boolean deleteCustomer(Long id) {
-        return customers.removeIf(customer -> customer.getId().equals(id));
+
+        if (!repository.existsById(id)) {
+            return false;
+        }
+
+        repository.deleteById(id);
+        return true;
     }
 
-    // --- NOUVELLE MÉTHODE DE LOGIN ---
+    // Connexion d'un client
     public Customer login(String email, String password) {
-        return customers.stream()
-                .filter(c -> c.getEmail().equalsIgnoreCase(email) && c.getPassword().equals(password))
-                .findFirst()
+
+        if (email == null || password == null) {
+            return null;
+        }
+
+        return repository.findByEmailIgnoreCase(email)
+                .filter(c -> encoder.matches(password, c.getPassword()))
                 .orElse(null);
     }
 }
